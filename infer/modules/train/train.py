@@ -229,10 +229,23 @@ def run(
             if rank == 0:
                 logger.info("loaded pretrained %s" % (hps.pretrainG))
             if hasattr(net_g, "module"):
-                logger.info(
-                    net_g.module.load_state_dict(
+                checkpoint = torch.load(hps.pretrainG, map_location="cpu")
+                checkpoint_state_dict = checkpoint['model']
+                keys_to_remove = [key for key in checkpoint_state_dict if 'emb_phone' in key]
+                for key in keys_to_remove:
+                    del checkpoint_state_dict[key]  # Remove the key
+                net_g.module.load_state_dict(checkpoint_state_dict, strict=False)
+                emb_phone_layer = getattr(net_g.module, 'emb_phone', None)
+                if emb_phone_layer is not None:
+                    # Initialize the layer weights, for example with xavier initialization
+                    torch.nn.init.xavier_uniform_(emb_phone_layer.weight)
+                    # If there's a bias, you may want to initialize it as well
+                    if emb_phone_layer.bias is not None:
+                        emb_phone_layer.bias.data.fill_(0.01)    
+                logger.info("loading G",
+                    '''net_g.module.load_state_dict(
                         torch.load(hps.pretrainG, map_location="cpu")["model"]
-                    )
+                    )'''
                 )  ##测试不加载优化器
             else:
                 logger.info(
@@ -399,6 +412,7 @@ def train_and_evaluate(
     # Run steps
     epoch_recorder = EpochRecorder()
     for batch_idx, info in data_iterator:
+        print("Iteration start")
         # Data
         ## Unpack
         if hps.if_f0 == 1:

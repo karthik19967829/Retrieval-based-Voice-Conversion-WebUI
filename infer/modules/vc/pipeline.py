@@ -231,7 +231,8 @@ class Pipeline(object):
 
             # _, I = index.search(npy, 1)
             # npy = big_npy[I.squeeze()]
-
+            print("index search size",index.d)
+            print("npy shape",npy.shape)           
             score, ix = index.search(npy, k=8)
             weight = np.square(1 / score)
             weight /= weight.sum(axis=1, keepdims=True)

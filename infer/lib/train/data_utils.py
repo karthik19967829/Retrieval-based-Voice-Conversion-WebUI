@@ -157,6 +157,8 @@ class TextAudioCollateMultiNSFsid:
         batch: [text_normalized, spec_normalized, wav_normalized]
         """
         # Right zero-pad all one-hot text sequences to max input length
+            #break
+
         _, ids_sorted_decreasing = torch.sort(
             torch.LongTensor([x[0].size(1) for x in batch]), dim=0, descending=True
         )
@@ -172,9 +174,11 @@ class TextAudioCollateMultiNSFsid:
 
         max_phone_len = max([x[2].size(0) for x in batch])
         phone_lengths = torch.LongTensor(len(batch))
+        
         phone_padded = torch.FloatTensor(
             len(batch), max_phone_len, batch[0][2].shape[1]
         )  # (spec, wav, phone, pitch)
+        #print("Initialized phone padded size",phone_padded.size())
         pitch_padded = torch.LongTensor(len(batch), max_phone_len)
         pitchf_padded = torch.FloatTensor(len(batch), max_phone_len)
         phone_padded.zero_()
@@ -182,7 +186,7 @@ class TextAudioCollateMultiNSFsid:
         pitchf_padded.zero_()
         # dv = torch.FloatTensor(len(batch), 256)#gin=256
         sid = torch.LongTensor(len(batch))
-
+        backup_phone = torch.randn(298, 1024) 
         for i in range(len(ids_sorted_decreasing)):
             row = batch[ids_sorted_decreasing[i]]
 
@@ -195,7 +199,22 @@ class TextAudioCollateMultiNSFsid:
             wave_lengths[i] = wave.size(1)
 
             phone = row[2]
+            #print("phone size",phone.size())
+            #print("phone padded size",phone_padded.size())
+            #print("phone updated padded size",phone_padded[i, : phone.size(0), :].size())
             phone_padded[i, : phone.size(0), :] = phone
+            '''try:
+                if phone.size(1)==1024:
+                    backup_phone = phone
+                else:
+                    phone = backup_phone
+                phone_padded[i, : phone.size(0), :] = phone        
+            except Exception as e:
+                #print("Expecetion e",e)
+                #print("Except Phone padded size",phone_padded.size())
+                #print("Except Phone size",phone.size()) 
+                continue'''   
+
             phone_lengths[i] = phone.size(0)
 
             pitch = row[3]

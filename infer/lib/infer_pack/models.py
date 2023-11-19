@@ -16,6 +16,7 @@ from infer.lib.infer_pack.commons import get_padding, init_weights
 
 has_xpu = bool(hasattr(torch, "xpu") and torch.xpu.is_available())
 
+hubert_hidden_dim = 1024
 
 class TextEncoder256(nn.Module):
     def __init__(
@@ -91,7 +92,7 @@ class TextEncoder768(nn.Module):
         self.n_layers = n_layers
         self.kernel_size = kernel_size
         self.p_dropout = float(p_dropout)
-        self.emb_phone = nn.Linear(768, hidden_channels)
+        self.emb_phone = nn.Linear(hubert_hidden_dim, hidden_channels)
         self.lrelu = nn.LeakyReLU(0.1, inplace=True)
         if f0 == True:
             self.emb_pitch = nn.Embedding(256, hidden_channels)  # pitch 256
@@ -106,9 +107,12 @@ class TextEncoder768(nn.Module):
         self.proj = nn.Conv1d(hidden_channels, out_channels * 2, 1)
 
     def forward(self, phone: torch.Tensor, pitch: torch.Tensor, lengths: torch.Tensor):
+        '''if phone.size(2)!=1024:
+            phone = torch.randn(22,298,1024).to('cuda')'''
         if pitch is None:
             x = self.emb_phone(phone)
         else:
+            #print("phone dimension in models",phone.size())
             x = self.emb_phone(phone) + self.emb_pitch(pitch)
         x = x * math.sqrt(self.hidden_channels)  # [b, t, h]
         x = self.lrelu(x)
